@@ -1,0 +1,78 @@
+FROM resin/%%RESIN_MACHINE_NAME%%-python
+
+# update apt
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
+
+# install necessary build tools
+RUN apt-get -qy install build-essential cmake pkg-config unzip wget
+
+# install necessary libraries
+RUN apt-get -qy install \
+	libjpeg-dev \
+	libtiff5-dev \
+	libjasper-dev \
+	libpng12-dev \
+	libavcodec-dev \
+	libavformat-dev \
+	libswscale-dev \
+	libv4l-dev \
+	libxvidcore-dev \
+	libx264-dev \
+	libgtk2.0-dev \
+	libatlas-base-dev \
+	gfortran \
+	python \
+	python3.4-dev \
+	python3-pip \
+	python-picamera \
+	python-numpy \
+	python3-pygame
+	
+RUN pip3 install --upgrade pip && \
+    pip3 install numpy && \
+
+    apt-get autoclean && apt-get clean && \
+
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+	
+# download latest source & contrib
+RUN cd /tmp && \
+	wget -O opencv.zip https://github.com/opencv/opencv/archive/2.4.10.zip && \
+	unzip opencv.zip
+	
+
+
+# build opencv
+RUN cd /tmp/opencv-2.4.10 && \
+	mkdir build && \
+	cd build && \
+	cmake -D CMAKE_BUILD_TYPE=RELEASE \
+	-D CMAKE_INSTALL_PREFIX=/usr/local \
+	-D BUILD_PERF_TESTS=OFF \
+	-D BUILD_opencv_gpu=OFF \
+	-D WITH_FFMPEG=OFF \
+	-D BUILD_opencv_ocl=OFF .. && \
+	
+	make && \
+	make install && \
+	# ldconfig && \
+	make clean
+	
+# cleanup source
+RUN cd /tmp && rm -rf opencv-2.4.10
+
+
+RUN git clone https://github.com/lthiery/SPI-Py
+RUN cd SPI-Py && python setup.py install
+
+ADD . /app
+RUN pip install RPi.GPIO
+RUN pip install picamera
+
+COPY . /usr/ParkingFaceRec/app
+WORKDIR /usr/ParkingFaceRec/app
+# main.py will run when container starts up on the device
+RUN echo "udevd --daemon" > /start
+RUN echo  "modprobe spi-bcm2835-v412" >> /start
+
+CMD ["python", "admin.py"]

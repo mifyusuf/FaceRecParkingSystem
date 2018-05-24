@@ -1,0 +1,10 @@
+*.pyc
+capture.pgm
+
+*.idea
+mean.png
+negative_eigenface.png
+positive_eigenface.png
+*.wav
+*.pdf
+.DS_Store
